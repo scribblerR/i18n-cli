@@ -97,7 +97,7 @@ function getPrettierParser(ext: string): string {
 function getOutputPath(input: string, output: string, sourceFilePath: string): string {
   let outputPath
   if (output) {
-    const filePath = sourceFilePath.replace(input + '/', '')
+    const filePath = sourceFilePath.replace(getAbsolutePath(process.cwd(), input) + '/', '')
     outputPath = getAbsolutePath(process.cwd(), output, filePath)
     fs.ensureFileSync(outputPath)
   } else {
@@ -326,6 +326,10 @@ export default async function (options: CommandOptions) {
       // 只有文件提取过中文，或文件规则forceImport为true时，才重新写入文件
       if (Collector.getCountOfAdditions() > 0 || rules[ext].forceImport) {
         const stylizedCode = formatCode(code, ext, i18nConfig.prettier)
+        if (isArray(input)) {
+          log.error('input为数组时，暂不支持设置dist参数')
+          return
+        }
         const outputPath = getOutputPath(input, output, sourceFilePath)
         fs.writeFileSync(outputPath, stylizedCode, 'utf8')
         log.verbose(`生成文件:`, outputPath)
