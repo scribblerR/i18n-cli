@@ -47,6 +47,24 @@ interface Context {
   hasImportI18n?: boolean
 }
 
+function isInTypeScriptTypeContext(path: NodePath<any>): boolean {
+  // Skip when inside TS type positions to avoid replacing with CallExpression
+  return Boolean(
+    path.findParent((p) => {
+      const t = (p as any).node?.type as string | undefined
+      if (!t) return false
+      if (t.startsWith('TS')) return true
+      // Common wrappers that indicate type-ish positions
+      return (
+        t === 'TSEnumMember' ||
+        t === 'TSEnumDeclaration' ||
+        t === 'TSAsExpression' ||
+        t === 'TSNonNullExpression'
+      )
+    })
+  )
+}
+
 function getObjectExpression(obj: TemplateParams): ObjectExpression {
   const ObjectPropertyArr: Array<ObjectMethod | ObjectProperty | SpreadElement> = []
   Object.keys(obj).forEach((k) => {
@@ -247,6 +265,10 @@ function transformJs(
 
         StringLiteral(path: NodePath<StringLiteral>) {
           // raw可以拿到未转义的原始文本。例如\u4E00，用raw获取时是'\u4E00'。用value获取的是'一'
+          if (isInTypeScriptTypeContext(path)) {
+            path.skip()
+            return
+          }
           const value = path.node.extra
             ? (path.node.extra.raw as string).slice(1, -1)
             : path.node.value
@@ -271,6 +293,10 @@ function transformJs(
         },
 
         TemplateLiteral(path: NodePath<TemplateLiteral>) {
+          if (isInTypeScriptTypeContext(path)) {
+            path.skip()
+            return
+          }
           const { node } = path
           const templateMembers = [...node.quasis, ...node.expressions]
           templateMembers.sort((a, b) => (a.start as number) - (b.start as number))

@@ -9,6 +9,7 @@ import glob from 'glob'
 import merge from 'lodash/merge'
 import cloneDeep from 'lodash/cloneDeep'
 import isArray from 'lodash/isArray'
+import slash from 'slash'
 import transform from './transform'
 import log from './utils/log'
 import { getAbsolutePath } from './utils/getAbsolutePath'
@@ -39,9 +40,12 @@ function resolvePathFrom(inputPath: string) {
 function getPathFromInput(input: string, exclude: string[]) {
   const resolvePath = resolvePathFrom(input)
   if (isDirectory(resolvePath)) {
+    const base = slash(resolvePath)
+    const pattern = `${base}/**/*.{cjs,mjs,js,ts,tsx,jsx,vue}`
+    const ignore = Array.isArray(exclude) ? exclude.map((p) => slash(p)) : []
     const paths = glob
-      .sync(`${resolvePath}/**/*.{cjs,mjs,js,ts,tsx,jsx,vue}`, {
-        ignore: exclude,
+      .sync(pattern, {
+        ignore,
       })
       .filter((file) => fs.statSync(file).isFile())
     return paths
