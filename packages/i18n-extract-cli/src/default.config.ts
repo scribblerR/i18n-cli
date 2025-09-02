@@ -1,9 +1,18 @@
 import { Config, Rule } from '../types'
+import { createEnhancedCustomizeKey, getDefaultCustomizeKey } from './utils/enhancedCustomizeKey'
 
 // 参数path，在生成配置文件时需要展示在文件里，所以这里去掉eslint校验
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getCustomizeKey(key: string, path?: string): string {
   return key
+}
+
+// 创建支持 OpenAI 的 customizeKey 函数
+function getOpenAICustomizeKey(openaiConfig?: any) {
+  if (openaiConfig?.enableKeyGeneration) {
+    return createEnhancedCustomizeKey(openaiConfig)
+  }
+  return getDefaultCustomizeKey()
 }
 
 function getCustomSlot(slotValue: string): string {

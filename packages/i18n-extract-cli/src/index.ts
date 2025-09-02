@@ -48,6 +48,37 @@ program
     require('./commands/loadExcel').default(options)
   })
 
+program
+  .command('optimize-keys')
+  .description('使用 OpenAI 优化已提取的国际化 key')
+  .option('-v, --verbose', '控制台打印更多调试信息')
+  .option('--localePath <path>', '指定要优化的中文语言包路径', './locales/zh-CN.json')
+  .option('--output <path>', '优化后的输出文件路径（可选）')
+  .option('--dry-run', '预览模式，不实际修改文件')
+  .option('--openai-base-url <url>', 'OpenAI base URL', 'https://api.openai.com/v1')
+  .option('--openai-api-key <key>', 'OpenAI API key（或设置环境变量 OPENAI_API_KEY）')
+  .option('--openai-model <model>', 'OpenAI 模型', 'gpt-4o-mini')
+  .action((options) => {
+    const optimizeKeysCommand = require('./commands/optimizeKeys').optimizeKeys
+
+    const openaiConfig = {
+      baseUrl: options.openaiBaseUrl,
+      apiKey: options.openaiApiKey,
+      model: options.openaiModel,
+      enableKeyGeneration: true,
+    }
+
+    optimizeKeysCommand({
+      localePath: options.localePath,
+      openaiConfig,
+      dryRun: options.dryRun,
+      outputPath: options.output,
+    }).catch((error: any) => {
+      console.error('Key optimization failed:', error)
+      process.exit(1)
+    })
+  })
+
 program.addOption(new Option('-d, --debug').hideHelp())
 
 program.on('option:verbose', function () {

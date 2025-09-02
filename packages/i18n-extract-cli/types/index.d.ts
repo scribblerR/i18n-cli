@@ -68,6 +68,7 @@ export interface OpenAIConfig {
   baseUrl?: string
   apiKey?: string
   model?: string
+  enableKeyGeneration?: boolean
 }
 
 export type translatorType = 'google' | 'youdao' | 'baidu' | 'alicloud' | 'openai'

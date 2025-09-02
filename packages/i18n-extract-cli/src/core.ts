@@ -24,6 +24,7 @@ import { saveLocaleFile } from './utils/saveLocaleFile'
 import { isObject } from './utils/assertType'
 import errorLogger from './utils/error-logger'
 import isDirectory from './utils/isDirectory'
+import { createEnhancedCustomizeKey } from './utils/enhancedCustomizeKey'
 
 interface InquirerResult {
   translator?: 'google' | 'youdao' | 'baidu' | 'alicloud' | 'openai'
@@ -33,6 +34,7 @@ interface InquirerResult {
   openai_baseUrl?: string
   openai_apiKey?: string
   openai_model?: string
+  openai_enableKeyGeneration?: boolean
 }
 
 function resolvePathFrom(inputPath: string) {
@@ -145,6 +147,7 @@ function formatInquirerResult(answers: InquirerResult): TranslateConfig {
         baseUrl: answers.openai_baseUrl || undefined,
         apiKey: answers.openai_apiKey || undefined,
         model: answers.openai_model || undefined,
+        enableKeyGeneration: answers.openai_enableKeyGeneration || false,
       },
     }
   } else {
@@ -203,6 +206,15 @@ async function getTranslationConfig() {
       name: 'openai_model',
       message: 'OpenAI 模型（可选，默认 gpt-4o-mini）',
       default: oldConfigCache.openai_model || '',
+      when(answers) {
+        return answers.translator === OPENAI
+      },
+    },
+    {
+      type: 'confirm',
+      name: 'openai_enableKeyGeneration',
+      message: '是否启用 OpenAI 智能 key 生成功能？',
+      default: false,
       when(answers) {
         return answers.translator === OPENAI
       },
@@ -315,6 +327,19 @@ export default async function (options: CommandOptions) {
     const translationConfig = await getTranslationConfig()
     i18nConfig = merge(i18nConfig, translationConfig)
   }
+
+  // 如果启用了 OpenAI key 生成，更新 rules 中的 customizeKey 函数
+  if (i18nConfig.openai?.enableKeyGeneration) {
+    const enhancedCustomizeKey = createEnhancedCustomizeKey(i18nConfig.openai)
+
+    // 更新所有文件类型的 customizeKey 函数
+    Object.keys(i18nConfig.rules).forEach((ext) => {
+      i18nConfig.rules[ext as keyof typeof i18nConfig.rules].customizeKey = enhancedCustomizeKey
+    })
+
+    log.info('OpenAI key generation enabled for extraction')
+  }
+
   // 全局缓存脚手架配置
   StateManager.setToolConfig(i18nConfig)
 

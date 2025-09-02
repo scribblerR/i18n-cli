@@ -55,12 +55,12 @@
     "lodash": "^4.17.21",
     "minimist": "^1.2.8",
     "mustache": "^4.2.0",
+    "node-fetch": "^2.7.0",
     "node-xlsx": "^0.21.0",
     "prettier": "^2.7.1",
     "semver": "^7.3.8",
     "serialize-javascript": "^6.0.0",
-    "slash": "3.0.0",
-    "node-fetch": "^2.7.0"
+    "slash": "3.0.0"
   },
   "devDependencies": {
     "@types/babel__core": "^7.1.20",
@@ -75,6 +75,7 @@
     "@types/lodash": "^4.14.188",
     "@types/minimist": "^1.2.2",
     "@types/mustache": "^4.2.5",
+    "@types/node-fetch": "^2.6.13",
     "@types/prettier": "^2.7.1",
     "@types/serialize-javascript": "^5.0.2",
     "rimraf": "^3.0.2"
