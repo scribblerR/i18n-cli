@@ -64,7 +64,13 @@ interface AlicloudConfig {
   secret?: string
 }
 
-export type translatorType = 'google' | 'youdao' | 'baidu' | 'alicloud'
+export interface OpenAIConfig {
+  baseUrl?: string
+  apiKey?: string
+  model?: string
+}
+
+export type translatorType = 'google' | 'youdao' | 'baidu' | 'alicloud' | 'openai'
 export interface TranslateConfig {
   translator?: translatorType
   google?: {
@@ -73,6 +79,7 @@ export interface TranslateConfig {
   youdao?: YoudaoConfig
   baidu?: BaiduConfig
   alicloud?: AlicloudConfig
+  openai?: OpenAIConfig
   translationTextMaxLength?: number
 }
 

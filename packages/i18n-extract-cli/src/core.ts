@@ -16,7 +16,7 @@ import { getAbsolutePath } from './utils/getAbsolutePath'
 import Collector from './collector'
 import translate from './translate'
 import getLang from './utils/getLang'
-import { YOUDAO, GOOGLE, BAIDU, ALICLOUD } from './utils/constants'
+import { YOUDAO, GOOGLE, BAIDU, ALICLOUD, OPENAI } from './utils/constants'
 import StateManager from './utils/stateManager'
 import exportExcel from './exportExcel'
 import { getI18nConfig } from './utils/initConfig'
@@ -26,10 +26,13 @@ import errorLogger from './utils/error-logger'
 import isDirectory from './utils/isDirectory'
 
 interface InquirerResult {
-  translator?: 'google' | 'youdao' | 'baidu' | 'alicloud'
+  translator?: 'google' | 'youdao' | 'baidu' | 'alicloud' | 'openai'
   key?: string
   secret?: string
   proxy?: string
+  openai_baseUrl?: string
+  openai_apiKey?: string
+  openai_model?: string
 }
 
 function resolvePathFrom(inputPath: string) {
@@ -135,6 +138,15 @@ function formatInquirerResult(answers: InquirerResult): TranslateConfig {
         secret: answers.secret,
       },
     }
+  } else if (answers.translator === OPENAI) {
+    return {
+      translator: answers.translator,
+      openai: {
+        baseUrl: answers.openai_baseUrl || undefined,
+        apiKey: answers.openai_apiKey || undefined,
+        model: answers.openai_model || undefined,
+      },
+    }
   } else {
     return {
       translator: answers.translator,
@@ -162,9 +174,37 @@ async function getTranslationConfig() {
         { name: '谷歌翻译', value: GOOGLE },
         { name: '百度翻译', value: BAIDU },
         { name: '阿里云机器翻译', value: ALICLOUD },
+        { name: 'OpenAI', value: OPENAI },
       ],
       when(answers) {
         return !answers.skipTranslate
+      },
+    },
+    {
+      type: 'input',
+      name: 'openai_baseUrl',
+      message: 'OpenAI baseUrl（可选，默认https://api.openai.com/v1）',
+      default: oldConfigCache.openai_baseUrl || '',
+      when(answers) {
+        return answers.translator === OPENAI
+      },
+    },
+    {
+      type: 'input',
+      name: 'openai_apiKey',
+      message: 'OpenAI apiKey（留空将读取环境变量 OPENAI_API_KEY）',
+      default: oldConfigCache.openai_apiKey || '',
+      when(answers) {
+        return answers.translator === OPENAI
+      },
+    },
+    {
+      type: 'input',
+      name: 'openai_model',
+      message: 'OpenAI 模型（可选，默认 gpt-4o-mini）',
+      default: oldConfigCache.openai_model || '',
+      when(answers) {
+        return answers.translator === OPENAI
       },
     },
     {

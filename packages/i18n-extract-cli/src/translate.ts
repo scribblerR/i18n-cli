@@ -8,7 +8,7 @@ import {
 import type { TranslateConfig, StringObject, translatorType } from '../types'
 import { getAbsolutePath } from './utils/getAbsolutePath'
 import log from './utils/log'
-import { GOOGLE, YOUDAO, BAIDU, ALICLOUD } from './utils/constants'
+import { GOOGLE, YOUDAO, BAIDU, ALICLOUD, OPENAI } from './utils/constants'
 import getLang from './utils/getLang'
 import StateManager from './utils/stateManager'
 import { saveLocaleFile } from './utils/saveLocaleFile'
@@ -83,13 +83,57 @@ async function translateByAlicloud(
   }
 }
 
+async function translateByOpenAI(
+  word: string,
+  locale: string,
+  options: TranslateConfig
+): Promise<string> {
+  const baseUrl = options.openai?.baseUrl || 'https://api.openai.com/v1'
+  const apiKey = options.openai?.apiKey || process.env.OPENAI_API_KEY || ''
+  const model = options.openai?.model || 'gpt-4o-mini'
+  if (!apiKey) {
+    log.error('翻译失败，当前翻译器为OpenAI，请完善openai配置参数（apiKey）')
+    process.exit(1)
+  }
+  try {
+    const fetchImpl = (await import('node-fetch')).default as any
+    const sysPrompt = `You are a translator. Translate the following Simplified Chinese (zh-CN) text to ${locale}. Return only the translation. Preserve placeholders like {slot1}.`
+    const res = await fetchImpl(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: sysPrompt },
+          { role: 'user', content: word },
+        ],
+        temperature: 0.2,
+      }),
+    })
+    if (!res.ok) {
+      const text = await res.text()
+      log.error('OpenAI 翻译请求失败: ', text)
+      return ''
+    }
+    const data = await res.json()
+    const content = data?.choices?.[0]?.message?.content || ''
+    return content
+  } catch (e) {
+    log.error('OpenAI 翻译请求出错', e)
+    return ''
+  }
+}
+
 export default async function (
   localePath: string,
   locales: string[],
   oldPrimaryLang: StringObject,
   options: TranslateConfig
 ) {
-  if (![GOOGLE, YOUDAO, BAIDU, ALICLOUD].includes(options.translator || '')) {
+  if (![GOOGLE, YOUDAO, BAIDU, ALICLOUD, OPENAI].includes(options.translator || '')) {
     log.error('翻译失败，请确认translator参数是否配置正确')
     process.exit(1)
   }
@@ -176,6 +220,9 @@ class Translator {
         break
       case ALICLOUD:
         this.#provider = translateByAlicloud
+        break
+      case OPENAI:
+        this.#provider = translateByOpenAI
         break
     }
     this.#targetLocale = targetLocale
