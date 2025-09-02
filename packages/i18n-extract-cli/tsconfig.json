@@ -5,6 +5,7 @@
     "rootDir": "./src",
     "allowJs": true,
     "sourceMap": true,
+    "inlineSources": true,
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
   },
   "include": ["src"]
