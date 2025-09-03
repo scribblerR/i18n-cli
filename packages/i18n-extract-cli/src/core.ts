@@ -24,6 +24,9 @@ import { saveLocaleFile } from './utils/saveLocaleFile'
 import { isObject } from './utils/assertType'
 import errorLogger from './utils/error-logger'
 import isDirectory from './utils/isDirectory'
+import { generateSemanticSnakeCaseKeys } from './utils/openaiKeyMapper'
+import https from 'https'
+import http from 'http'
 
 interface InquirerResult {
   translator?: 'google' | 'youdao' | 'baidu' | 'alicloud'
@@ -292,6 +295,39 @@ export default async function (options: CommandOptions) {
   } = i18nConfig
   log.debug(`命令行配置信息:`, i18nConfig)
 
+  const openaiCfg = i18nConfig.openai || {}
+  const hasOpenAI = !!(openaiCfg.apiKey || openaiCfg.baseUrl)
+  async function getReservedKeysFromExistedConfig(): Promise<Set<string>> {
+    const conf = i18nConfig.existedConfig || {}
+    const local = Array.isArray(conf.existedKeys) ? conf.existedKeys : []
+    const url = conf.getExistedUrl || ''
+    const field = conf.mapFieldToKey || 'key'
+    if (!url) return new Set(local)
+    const client = url.startsWith('https') ? https : http
+    const data: any = await new Promise((resolve) => {
+      client
+        .get(url, (res) => {
+          let raw = ''
+          res.on('data', (chunk) => (raw += chunk))
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(raw))
+            } catch (e) {
+              resolve([])
+            }
+          })
+        })
+        .on('error', () => resolve([]))
+    })
+    let remote: string[] = []
+    if (Array.isArray(data)) {
+      remote = data
+        .map((item) => (item && typeof item === 'object' ? item[field] : undefined))
+        .filter((k) => typeof k === 'string')
+    }
+    return new Set<string>([...local, ...remote])
+  }
+
   let oldPrimaryLang: Record<string, string> = {}
   const primaryLangPath = getAbsolutePath(process.cwd(), localePath)
   if (!fs.existsSync(primaryLangPath)) {
@@ -327,8 +363,8 @@ export default async function (options: CommandOptions) {
       const { code } = transform(sourceCode, ext, rules, sourceFilePath)
       log.verbose(`完成中文提取和语法转换:`, sourceFilePath)
 
-      // 只有文件提取过中文，或文件规则forceImport为true时，才重新写入文件
-      if (Collector.getCountOfAdditions() > 0 || rules[ext].forceImport) {
+      // 首次遍历：若启用OpenAI语义key，先不写文件，仅收集中文
+      if (!hasOpenAI && (Collector.getCountOfAdditions() > 0 || rules[ext].forceImport)) {
         const stylizedCode = formatCode(code, ext, i18nConfig.prettier)
         if (isArray(input)) {
           log.error('input为数组时，暂不支持设置dist参数')
@@ -356,6 +392,42 @@ export default async function (options: CommandOptions) {
     if (i18nConfig.incremental) {
       const newkeyMap = merge(oldPrimaryLang, Collector.getKeyMap())
       Collector.setKeyMap(newkeyMap)
+    }
+
+    // If OpenAI config exists, transform keys using semantic snake_case mapping
+    if (hasOpenAI) {
+      const flatMap: Record<string, string> = {}
+      Object.keys(Collector.getKeyMap()).forEach((k) => {
+        const v = Collector.getKeyMap()[k]
+        if (typeof v === 'string') flatMap[k] = v
+      })
+      const originals = Object.keys(flatMap).map((k) => flatMap[k])
+      const reserved = await getReservedKeysFromExistedConfig()
+      const mapping = await generateSemanticSnakeCaseKeys(originals, openaiCfg, reserved)
+      StateManager.setOpenAIKeyMap(mapping)
+
+      // Re-run transform to rewrite files with processed keys
+      bar.update(0)
+      bar.setTotal(sourceFilePaths.length)
+      // Reset collected map for second pass
+      Collector.setKeyMap({})
+      Collector.resetCurrentFileKeyMap()
+      for (const sourceFilePath of sourceFilePaths) {
+        StateManager.setCurrentSourcePath(sourceFilePath)
+        errorLogger.setFilePath(sourceFilePath)
+        const sourceCode = fs.readFileSync(sourceFilePath, 'utf8')
+        const ext = path.extname(sourceFilePath).replace('.', '') as FileExtension
+        const { code } = transform(sourceCode, ext, rules, sourceFilePath)
+        const stylizedCode = formatCode(code, ext, i18nConfig.prettier)
+        if (isArray(input)) {
+          log.error('input为数组时，暂不支持设置dist参数')
+        } else {
+          const outputPath = getOutputPath(input, output, sourceFilePath)
+          fs.writeFileSync(outputPath, stylizedCode, 'utf8')
+          log.verbose(`生成文件(二次语义key重写):`, outputPath)
+        }
+        bar.increment()
+      }
     }
 
     const extName = path.extname(localePath)

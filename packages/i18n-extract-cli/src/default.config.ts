@@ -7,7 +7,7 @@ function getCustomizeKey(key: string, path?: string): string {
 }
 
 function getCustomSlot(slotValue: string): string {
-  return `{${slotValue}}`
+  return `{{${slotValue}}}`
 }
 
 function getCommonRule(): Rule {
@@ -24,6 +24,11 @@ const config: Config = {
   input: 'src',
   output: '',
   exclude: ['**/node_modules/**/*'],
+  openai: {
+    baseUrl: '',
+    apiKey: '',
+    model: 'gpt-4o-mini',
+  },
   rules: {
     js: getCommonRule(),
     ts: getCommonRule(),
@@ -62,6 +67,11 @@ const config: Config = {
   locales: ['en-US'],
   globalRule: {
     ignoreMethods: [],
+  },
+  existedConfig: {
+    existedKeys: [],
+    getExistedUrl: '',
+    mapFieldToKey: 'key',
   },
   // 参数currentFileKeyMap和currentFilePath，在生成配置文件时需要展示在文件里，所以这里去掉eslint校验
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

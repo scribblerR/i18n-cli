@@ -1,4 +1,5 @@
 import type { CustomizeKey, StringObject } from '../types'
+import State from './utils/stateManager'
 import log from './utils/log'
 import { removeLineBreaksInTag } from './utils/removeLineBreaksInTag'
 import { escapeQuotes } from './utils/escapeQuotes'
@@ -32,7 +33,13 @@ class Collector {
 
   add(originalText: string, customizeKeyFn: CustomizeKey) {
     const formattedText = removeLineBreaksInTag(originalText)
-    const translationKey = customizeKeyFn(escapeQuotes(formattedText), this.currentFilePath) // key中不能包含回车
+    const mapped = State.getOpenAIKeyMap()[formattedText]
+    const baseKey = mapped || escapeQuotes(formattedText)
+    let translationKey = customizeKeyFn(baseKey, this.currentFilePath) // key中不能包含回车
+    // 带有变量的国际化语句，key以 var_ 开头
+    if (/\{\{[^}]+\}\}/.test(formattedText) && !translationKey.startsWith('var_')) {
+      translationKey = `var_${translationKey}`
+    }
     log.verbose('提取中文：', formattedText)
     this.keyMap[translationKey] = formattedText.replace('|', "{'|'}") // '|' 管道符在vue-i18n表示复数形式,需要特殊处理。见https://vue-i18n.intlify.dev/guide/essentials/pluralization.html
     this.countOfAdditions++

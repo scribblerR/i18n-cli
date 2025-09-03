@@ -12,6 +12,8 @@ class StateManager {
 
   private vueScriptLang = 'js'
 
+  private openAIKeyMap: Record<string, string> = {}
+
   static getInstance() {
     if (!this._instance) {
       this._instance = new StateManager()
@@ -40,6 +42,14 @@ class StateManager {
 
   getVueScriptLang(): string {
     return this.vueScriptLang
+  }
+
+  setOpenAIKeyMap(map: Record<string, string>): void {
+    this.openAIKeyMap = map || {}
+  }
+
+  getOpenAIKeyMap(): Record<string, string> {
+    return this.openAIKeyMap
   }
 }
 

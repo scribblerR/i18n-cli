@@ -111,6 +111,16 @@ export type Config = {
   excelPath: string
   exportExcel: boolean
   adjustKeyMap?: AdjustKeyMap
+  openai?: {
+    baseUrl?: string
+    apiKey?: string
+    model?: string
+  }
+  existedConfig?: {
+    existedKeys?: string[]
+    getExistedUrl?: string
+    mapFieldToKey?: string
+  }
 } & TranslateConfig
 
 export interface CommandOptions {
