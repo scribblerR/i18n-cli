@@ -16,7 +16,7 @@ import { getAbsolutePath } from './utils/getAbsolutePath'
 import Collector from './collector'
 import translate from './translate'
 import getLang from './utils/getLang'
-import { YOUDAO, GOOGLE, BAIDU, ALICLOUD } from './utils/constants'
+import { YOUDAO, GOOGLE, BAIDU, ALICLOUD, OPENAI } from './utils/constants'
 import StateManager from './utils/stateManager'
 import exportExcel from './exportExcel'
 import { getI18nConfig } from './utils/initConfig'
@@ -29,10 +29,13 @@ import https from 'https'
 import http from 'http'
 
 interface InquirerResult {
-  translator?: 'google' | 'youdao' | 'baidu' | 'alicloud'
+  translator?: 'google' | 'youdao' | 'baidu' | 'alicloud' | 'openai'
   key?: string
   secret?: string
   proxy?: string
+  openaiBaseUrl?: string
+  openaiApiKey?: string
+  openaiModel?: string
 }
 
 function resolvePathFrom(inputPath: string) {
@@ -138,6 +141,15 @@ function formatInquirerResult(answers: InquirerResult): TranslateConfig {
         secret: answers.secret,
       },
     }
+  } else if (answers.translator === OPENAI) {
+    return {
+      translator: answers.translator,
+      openai: {
+        baseUrl: answers.openaiBaseUrl,
+        apiKey: answers.openaiApiKey,
+        model: answers.openaiModel || 'gpt-4o-mini',
+      },
+    }
   } else {
     return {
       translator: answers.translator,
@@ -165,6 +177,7 @@ async function getTranslationConfig() {
         { name: '谷歌翻译', value: GOOGLE },
         { name: '百度翻译', value: BAIDU },
         { name: '阿里云机器翻译', value: ALICLOUD },
+        { name: 'OpenAI 翻译', value: OPENAI },
       ],
       when(answers) {
         return !answers.skipTranslate
@@ -249,6 +262,33 @@ async function getTranslationConfig() {
       },
       validate(input) {
         return input.length === 0 ? 'accessKeySecret不能为空' : true
+      },
+    },
+    {
+      type: 'input',
+      name: 'openaiBaseUrl',
+      message: 'OpenAI baseUrl (默认 https://api.openai.com/v1，可选)',
+      default: oldConfigCache.openaiBaseUrl || '',
+      when(answers) {
+        return answers.translator === OPENAI
+      },
+    },
+    {
+      type: 'password',
+      name: 'openaiApiKey',
+      message: 'OpenAI API Key (必填或设置环境变量 OPENAI_API_KEY)',
+      default: oldConfigCache.openaiApiKey || '',
+      when(answers) {
+        return answers.translator === OPENAI
+      },
+    },
+    {
+      type: 'input',
+      name: 'openaiModel',
+      message: 'OpenAI 模型 (默认 gpt-4o-mini，可选)',
+      default: oldConfigCache.openaiModel || 'gpt-4o-mini',
+      when(answers) {
+        return answers.translator === OPENAI
       },
     },
   ])
@@ -448,6 +488,7 @@ export default async function (options: CommandOptions) {
       youdao: i18nConfig.youdao,
       baidu: i18nConfig.baidu,
       alicloud: i18nConfig.alicloud,
+      openai: i18nConfig.openai,
       translationTextMaxLength: i18nConfig.translationTextMaxLength,
     })
   }

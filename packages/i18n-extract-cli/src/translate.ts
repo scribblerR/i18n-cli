@@ -4,11 +4,12 @@ import {
   youdaoTranslate,
   baiduTranslate,
   alicloudTranslate,
+  openaiTranslate,
 } from '@ifreeovo/translate-utils'
 import type { TranslateConfig, StringObject, translatorType } from '../types'
 import { getAbsolutePath } from './utils/getAbsolutePath'
 import log from './utils/log'
-import { GOOGLE, YOUDAO, BAIDU, ALICLOUD } from './utils/constants'
+import { GOOGLE, YOUDAO, BAIDU, ALICLOUD, OPENAI } from './utils/constants'
 import getLang from './utils/getLang'
 import StateManager from './utils/stateManager'
 import { saveLocaleFile } from './utils/saveLocaleFile'
@@ -83,13 +84,35 @@ async function translateByAlicloud(
   }
 }
 
+async function translateByOpenAI(
+  word: string,
+  locale: string,
+  options: TranslateConfig
+): Promise<string> {
+  if (!options.openai || (!options.openai?.apiKey && !process.env.OPENAI_API_KEY)) {
+    log.error('翻译失败，当前翻译器为OpenAI，请完善openai配置参数')
+    process.exit(1)
+  }
+  try {
+    const cfg = Object.assign(
+      { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+      options.openai,
+      { apiKey: options.openai?.apiKey || process.env.OPENAI_API_KEY }
+    )
+    return await openaiTranslate(word, 'zh-CN', locale, cfg)
+  } catch (e) {
+    log.error('OpenAI 翻译请求出错', e)
+    return ''
+  }
+}
+
 export default async function (
   localePath: string,
   locales: string[],
   oldPrimaryLang: StringObject,
   options: TranslateConfig
 ) {
-  if (![GOOGLE, YOUDAO, BAIDU, ALICLOUD].includes(options.translator || '')) {
+  if (![GOOGLE, YOUDAO, BAIDU, ALICLOUD, OPENAI].includes(options.translator || '')) {
     log.error('翻译失败，请确认translator参数是否配置正确')
     process.exit(1)
   }
@@ -176,6 +199,9 @@ class Translator {
         break
       case ALICLOUD:
         this.#provider = translateByAlicloud
+        break
+      case OPENAI:
+        this.#provider = translateByOpenAI
         break
     }
     this.#targetLocale = targetLocale

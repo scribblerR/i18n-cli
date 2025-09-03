@@ -1,6 +1,6 @@
 # @ifreeovo/translate-utils
 
-一个翻译工具函数库。支持有道，谷歌。
+一个翻译工具函数库。支持有道，谷歌，百度，阿里云机器翻译，以及 OpenAI。
 
 ## install
 
@@ -49,5 +49,32 @@ declare function youdaoTranslate(
 const res = await googleTranslate('翻译内容', 'zh-CN', 'en-US', {
   key: '2d8e89a6fd072117',
   secret: 'HiX7rGmYRad3ISMLYexRLfpkJi2taMPh',
+})
+```
+
+### openaiTranslate
+
+```ts
+interface OpenAIConfig {
+  baseUrl?: string // OpenAI API base URL, 默认 https://api.openai.com/v1
+  apiKey?: string // OpenAI API Key
+  model?: string // 模型，默认 gpt-4o-mini
+}
+
+declare function openaiTranslate(
+  word: string, // 待翻译文本，可包含多行，按 \n 分割
+  originLang: string, // 源语言
+  targetLang: string, // 目标语言
+  option: OpenAIConfig
+): Promise<string>
+```
+
+例子
+
+```js
+const res = await openaiTranslate('第一行\n第二行', 'zh-CN', 'en-US', {
+  apiKey: process.env.OPENAI_API_KEY,
+  baseUrl: 'https://api.openai.com/v1',
+  model: 'gpt-4o-mini',
 })
 ```

@@ -13,6 +13,12 @@ export interface AlicloudConfig {
   secret?: string
 }
 
+export interface OpenAIConfig {
+  baseUrl?: string
+  apiKey?: string
+  model?: string
+}
+
 declare namespace TranslateUtils {
   export declare function googleTranslate(
     word: string,
@@ -40,6 +46,13 @@ declare namespace TranslateUtils {
     originLang: string,
     targetLang: string,
     option: AlicloudConfig
+  ): Promise<string>
+
+  export declare function openaiTranslate(
+    word: string,
+    originLang: string,
+    targetLang: string,
+    option: OpenAIConfig
   ): Promise<string>
 }
 
