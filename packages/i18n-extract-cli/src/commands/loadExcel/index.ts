@@ -41,8 +41,15 @@ function execLoadExcel(options: CommandOptions) {
   if (xlsxData.length === 0) {
     return
   }
-  // 获取待生成的语言
-  const locales = xlsxData[0].slice(1)
+  // 获取待生成的语言（支持自定义表头标签）
+  const headerRow = xlsxData[0]
+  const headerLabels = headerRow.slice(1)
+  const reverseHeaderMap: Record<string, string> = {}
+  const customMap = i18nConfig.excelHeaderMap || {}
+  Object.keys(customMap).forEach((k) => {
+    reverseHeaderMap[customMap[k]] = k
+  })
+  const locales = headerLabels.map((label) => reverseHeaderMap[label] || label)
   const rows = xlsxData.slice(1)
   const langList: StringObject[] = getLangList(locales, rows)
 

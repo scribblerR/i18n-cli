@@ -115,6 +115,9 @@ export type Config = {
   globalRule: GlobalRule
   excelPath: string
   exportExcel: boolean
+  // Map locale codes to custom Excel header labels. Use key: 'key' for the first column
+  // Example: { key: '文本标识', 'zh-CN': '中文文本', 'en-US': '英文文本' }
+  excelHeaderMap?: Record<string, string>
   adjustKeyMap?: AdjustKeyMap
   openai?: {
     baseUrl?: string

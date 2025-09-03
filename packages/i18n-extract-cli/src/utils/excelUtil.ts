@@ -2,10 +2,12 @@ import xlsx from 'node-xlsx'
 import StateManager from './stateManager'
 
 export function getExcelHeader(): string[] {
-  const { locales } = StateManager.getToolConfig()
-  const header = ['字典key', 'zh-CN']
+  const { locales, excelHeaderMap } = StateManager.getToolConfig()
+  const keyHeader = (excelHeaderMap && excelHeaderMap['key']) || '字典key'
+  const zhHeader = (excelHeaderMap && excelHeaderMap['zh-CN']) || 'zh-CN'
+  const header = [keyHeader, zhHeader]
   for (const locale of locales) {
-    header.push(locale)
+    header.push((excelHeaderMap && excelHeaderMap[locale]) || locale)
   }
   return header
 }

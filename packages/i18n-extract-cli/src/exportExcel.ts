@@ -9,14 +9,15 @@ import { getLocaleDir } from './utils/getLocaleDir'
 import { flatObjectDeep } from './utils/flatObjectDeep'
 
 export default function exportExcel() {
-  const { localeFileType, excelPath } = StateManager.getToolConfig()
+  const { localeFileType, excelPath, locales: configLocales } = StateManager.getToolConfig()
   const headers = getExcelHeader()
   const matchResult = excelPath.match(new RegExp(`([A-Za-z-]+.xlsx)`, 'g')) ?? []
   const excelFileName = matchResult[0] ?? ''
 
   // 获取语言包存放路径
   const localeDirPath = getLocaleDir()
-  const locales = headers.slice(1)
+  // Build locales list using real locale codes, not header labels
+  const locales = Array.from(new Set(['zh-CN', ...configLocales]))
 
   // 遍历每个语言包，并组成excel的data
   const data: string[][] = []
@@ -54,6 +55,5 @@ export default function exportExcel() {
   }
 
   const excelBuffer = buildExcel(headers, data, excelFileName)
-  const excelData = new Uint8Array(excelBuffer, excelBuffer.byteOffset, excelBuffer.length)
-  fs.writeFileSync(getAbsolutePath(process.cwd(), excelPath), excelData, 'utf8')
+  fs.writeFileSync(getAbsolutePath(process.cwd(), excelPath), excelBuffer)
 }

@@ -160,18 +160,20 @@ function formatInquirerResult(answers: InquirerResult): TranslateConfig {
   }
 }
 
-async function getTranslationConfig() {
+async function getTranslationConfig(currentConfig?: TranslateConfig) {
   const cachePath = getAbsolutePath(__dirname, '../.cache/configCache.json')
   fs.ensureFileSync(cachePath)
   const cache = fs.readFileSync(cachePath, 'utf8') || '{}'
   const oldConfigCache: InquirerResult = JSON.parse(cache)
+  const openaiConfigured = !!(currentConfig && currentConfig.openai && currentConfig.openai.apiKey)
+  const defaultTranslator = (currentConfig && (currentConfig as any).translator) || YOUDAO
 
   const answers = await inquirer.prompt([
     {
       type: 'list',
       name: 'translator',
       message: '请选择翻译接口',
-      default: YOUDAO,
+      default: defaultTranslator,
       choices: [
         { name: '有道翻译', value: YOUDAO },
         { name: '谷歌翻译', value: GOOGLE },
@@ -270,7 +272,7 @@ async function getTranslationConfig() {
       message: 'OpenAI baseUrl (默认 https://api.openai.com/v1，可选)',
       default: oldConfigCache.openaiBaseUrl || '',
       when(answers) {
-        return answers.translator === OPENAI
+        return answers.translator === OPENAI && !openaiConfigured
       },
     },
     {
@@ -279,7 +281,7 @@ async function getTranslationConfig() {
       message: 'OpenAI API Key (必填或设置环境变量 OPENAI_API_KEY)',
       default: oldConfigCache.openaiApiKey || '',
       when(answers) {
-        return answers.translator === OPENAI
+        return answers.translator === OPENAI && !openaiConfigured
       },
     },
     {
@@ -288,7 +290,7 @@ async function getTranslationConfig() {
       message: 'OpenAI 模型 (默认 gpt-4o-mini，可选)',
       default: oldConfigCache.openaiModel || 'gpt-4o-mini',
       when(answers) {
-        return answers.translator === OPENAI
+        return answers.translator === OPENAI && !openaiConfigured
       },
     },
   ])
@@ -296,7 +298,11 @@ async function getTranslationConfig() {
   const newConfigCache = Object.assign(oldConfigCache, answers)
   fs.writeFileSync(cachePath, JSON.stringify(newConfigCache), 'utf8')
 
-  const result = formatInquirerResult(answers)
+  const result = formatInquirerResult(
+    openaiConfigured && answers.translator === OPENAI
+      ? ({ translator: OPENAI } as InquirerResult)
+      : answers
+  )
   return result
 }
 
@@ -315,7 +321,7 @@ function formatCode(code: string, ext: string, prettierConfig: PrettierConfig): 
 export default async function (options: CommandOptions) {
   let i18nConfig = getI18nConfig(options)
   if (!i18nConfig.skipTranslate) {
-    const translationConfig = await getTranslationConfig()
+    const translationConfig = await getTranslationConfig(i18nConfig)
     i18nConfig = merge(i18nConfig, translationConfig)
   }
   // 全局缓存脚手架配置

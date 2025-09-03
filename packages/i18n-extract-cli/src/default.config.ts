@@ -62,6 +62,7 @@ const config: Config = {
   localeFileType: 'json',
   excelPath: './locales.xlsx',
   exportExcel: false,
+  excelHeaderMap: undefined,
   skipTranslate: false,
   translationTextMaxLength: 5000,
   locales: ['en-US'],
